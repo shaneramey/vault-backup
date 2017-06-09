@@ -1,6 +1,13 @@
 #! /usr/bin/env python
-# dumps a HashiCorp Vault to write statements
-# requires an already-authenticated session
+#
+# Dumps a HashiCorp Vault database to write statements.
+# Useful for backing up in-memory vault data
+# and later restoring from the generated script.
+#
+# Requires: an already-authenticated session
+#
+# Copyright (c) 2017 Shane Ramey <shane.ramey@gmail.com>
+# Licensed under the Apache License, Version 2.0
 
 import subprocess
 import os
