@@ -19,6 +19,8 @@ def print_header():
     print "# backup date: {}".format(date)
     print "# VAULT_ADDR env variable: {}".format(vault_address)
     print '#'
+    print '# WARNING: not guaranteed to be consistent!'
+    print '#'
 
 # looks at an argument for a value and prints the key
 #  if a value exists
