@@ -6,9 +6,16 @@
 #
 # Requires: an already-authenticated session
 #
+# Reads env vars:
+# - VAULT_ADDR  which points to desired Hashicorp Vault instance, default http://localhost:8200
+# - TOP_VAULT_PREFIX to specify path to dump, for partial backups, default /secret/
+#
+# Use custom encoding:
+#   PYTHONIOENCODING=utf-8 python vault-dump.py
+#
 # Copyright (c) 2017 Shane Ramey <shane.ramey@gmail.com>
 # Licensed under the Apache License, Version 2.0
-
+import sys
 import subprocess
 import os
 import pwd
@@ -18,13 +25,17 @@ import datetime
 def print_header():
     user = pwd.getpwuid(os.getuid()).pw_name
     date = "{} UTC".format(datetime.datetime.utcnow())
-    vault_address = os.environ['VAULT_ADDR']
+    vault_address = os.environ.get('VAULT_ADDR')
+    top_vault_prefix = os.environ.get('TOP_VAULT_PREFIX','/secret/')
 
     print '#'
     print '# vault-dump.py backup'
     print "# dump made by {}".format(user)
     print "# backup date: {}".format(date)
     print "# VAULT_ADDR env variable: {}".format(vault_address)
+    print "# TOP_VAULT_PREFIX env variable: {}".format(top_vault_prefix)
+    print '# STDIN encoding: {}'.format(sys.stdin.encoding)
+    print '# STDOUT encoding: {}'.format(sys.stdout.encoding)
     print '#'
     print '# WARNING: not guaranteed to be consistent!'
     print '#'
@@ -51,13 +62,23 @@ def recurse_for_values(path_prefix, candidate_key):
             last_final_value = final_dict[last_final_key]
             print "  {0}=\'{1}\'".format(last_final_key, last_final_value)
 
-env_token = subprocess.check_output(
+
+env_vars = os.environ.copy()
+hvac_token = subprocess.check_output(
     "vault read -field id auth/token/lookup-self",
-    shell=True)
-client = hvac.Client(token=env_token)
+    shell=True,
+    env=env_vars)
+
+hvac_url = os.environ.get('VAULT_ADDR','http://localhost:8200')
+hvac_client = {
+    'url': hvac_url,
+    'token': hvac_token,
+}
+client = hvac.Client(**hvac_client)
 assert client.is_authenticated()
 
+top_vault_prefix = os.environ.get('TOP_VAULT_PREFIX','/secret/')
+
 print_header()
-top_vault_prefix = '/secret/'
 top_level_keys = client.list(top_vault_prefix)
 recurse_for_values(top_vault_prefix, top_level_keys)
