@@ -22,6 +22,7 @@ The following environment variables are used:
 
 # Known limitations
 
+You still need vault client.
 You must have right to list keys for TOP_VAULT_PREFIX, otherwise you' will get error with trace.
 
 # Preparing python environment
