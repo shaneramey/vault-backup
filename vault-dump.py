@@ -15,6 +15,7 @@
 #
 # Copyright (c) 2017 Shane Ramey <shane.ramey@gmail.com>
 # Licensed under the Apache License, Version 2.0
+from __future__ import print_function
 import sys
 import subprocess
 import os
@@ -28,17 +29,17 @@ def print_header():
     vault_address = os.environ.get('VAULT_ADDR')
     top_vault_prefix = os.environ.get('TOP_VAULT_PREFIX','/secret/')
 
-    print '#'
-    print '# vault-dump.py backup'
-    print "# dump made by {}".format(user)
-    print "# backup date: {}".format(date)
-    print "# VAULT_ADDR env variable: {}".format(vault_address)
-    print "# TOP_VAULT_PREFIX env variable: {}".format(top_vault_prefix)
-    print '# STDIN encoding: {}'.format(sys.stdin.encoding)
-    print '# STDOUT encoding: {}'.format(sys.stdout.encoding)
-    print '#'
-    print '# WARNING: not guaranteed to be consistent!'
-    print '#'
+    print ('#')
+    print ('# vault-dump.py backup')
+    print ("# dump made by {}".format(user))
+    print ("# backup date: {}".format(date))
+    print ("# VAULT_ADDR env variable: {}".format(vault_address))
+    print ("# TOP_VAULT_PREFIX env variable: {}".format(top_vault_prefix))
+    print ('# STDIN encoding: {}'.format(sys.stdin.encoding))
+    print ('# STDOUT encoding: {}'.format(sys.stdout.encoding))
+    print ('#')
+    print ('# WARNING: not guaranteed to be consistent!')
+    print ('#')
 
 # looks at an argument for a value and prints the key
 #  if a value exists
@@ -46,21 +47,22 @@ def recurse_for_values(path_prefix, candidate_key):
     candidate_values = candidate_key['data']['keys']
     for candidate_value in candidate_values:
         next_index = path_prefix + candidate_value
-        next_value = client.list(next_index)
-        if isinstance(next_value, dict):
+        if candidate_value.endswith('/'):
+            next_value = client.list(next_index)
             recurse_for_values(next_index, next_value)
         else:
             stripped_prefix=path_prefix[:-1]
             final_dict = client.read(next_index)['data']
-            print "vault write {} \\".format(next_index)
+            print ("\nvault write {}".format(next_index), end='')
 
             sorted_final_keys = sorted(final_dict.keys())
-            for final_key in sorted_final_keys[:-1]:
+            for final_key in sorted_final_keys:
                 final_value = final_dict[final_key]
-                print "  {0}=\'{1}\' \\".format(final_key, final_value)
-            last_final_key = sorted_final_keys[-1]
-            last_final_value = final_dict[last_final_key]
-            print "  {0}=\'{1}\'".format(last_final_key, last_final_value)
+                try:
+                    final_value = final_value.encode("utf-8")
+                except AttributeError:
+                    final_value = final_value
+                print (" {0}={1}".format(final_key, repr(final_value)), end='')
 
 
 env_vars = os.environ.copy()
