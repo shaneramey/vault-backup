@@ -1,4 +1,4 @@
-#! /usr/bin/env python
+#! /usr/bin/env python3
 #
 # Dumps a HashiCorp Vault database to write statements.
 # Useful for backing up in-memory vault data
@@ -44,25 +44,29 @@ def print_header():
 # looks at an argument for a value and prints the key
 #  if a value exists
 def recurse_for_values(path_prefix, candidate_key):
-    candidate_values = candidate_key['data']['keys']
+    if 'keys' in candidate_key:
+        candidate_values = candidate_key['keys']
+    else:
+        candidate_values = candidate_key['data']['keys']
     for candidate_value in candidate_values:
         next_index = path_prefix + candidate_value
         if candidate_value.endswith('/'):
             next_value = client.list(next_index)
             recurse_for_values(next_index, next_value)
         else:
-            stripped_prefix=path_prefix[:-1]
-            final_dict = client.read(next_index)['data']
-            print ("\nvault write {}".format(next_index), end='')
+            final_data = client.read(next_index) or {}
+            if 'rules' in final_data:
+                print ("\necho -ne {} | vault policy write {} -".format(repr(final_data['rules']), candidate_value), end='')
+            elif 'data' in final_data:
+                final_dict = final_data['data']
+                print ("\nvault write {}".format(next_index), end='')
 
-            sorted_final_keys = sorted(final_dict.keys())
-            for final_key in sorted_final_keys:
-                final_value = final_dict[final_key]
-                try:
-                    final_value = final_value.encode("utf-8")
-                except AttributeError:
-                    final_value = final_value
-                print (" {0}={1}".format(final_key, repr(final_value)), end='')
+                sorted_final_keys = sorted(final_dict.keys())
+                for final_key in sorted_final_keys:
+                    final_value = final_dict[final_key]
+                    print (" {0}={1}".format(final_key, repr(final_value)), end='')
+            else:
+                print("*** WARNING: no data for {}".format(repr(next_index)))
 
 
 env_vars = os.environ.copy()
@@ -77,6 +81,13 @@ hvac_client = {
     'token': hvac_token,
 }
 client = hvac.Client(**hvac_client)
+if os.environ.get('VAULT_SKIP_VERIFY'):
+    import requests
+    rs = requests.Session()
+    client.session = rs
+    rs.verify = False
+    import warnings
+    warnings.filterwarnings("ignore")
 assert client.is_authenticated()
 
 top_vault_prefix = os.environ.get('TOP_VAULT_PREFIX','/secret/')
@@ -84,3 +95,4 @@ top_vault_prefix = os.environ.get('TOP_VAULT_PREFIX','/secret/')
 print_header()
 top_level_keys = client.list(top_vault_prefix)
 recurse_for_values(top_vault_prefix, top_level_keys)
+print()
