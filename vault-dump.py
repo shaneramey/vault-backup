@@ -64,9 +64,9 @@ def recurse_for_values(path_prefix, candidate_key):
                 sorted_final_keys = sorted(final_dict.keys())
                 for final_key in sorted_final_keys:
                     final_value = final_dict[final_key]
-                    print (" {0}={1}".format(final_key, repr(final_value)), end='')
+                    print (" {0}='{1}'".format(final_key, final_value), end='')
             else:
-                print("*** WARNING: no data for {}".format(repr(next_index)))
+                print("*** WARNING: no data for {}".format(next_index))
 
 
 env_vars = os.environ.copy()
