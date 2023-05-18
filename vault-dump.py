@@ -22,6 +22,7 @@ import os
 import pwd
 import hvac
 import datetime
+import urllib3
 
 def print_header():
     user = pwd.getpwuid(os.getuid()).pw_name
@@ -76,18 +77,15 @@ hvac_token = subprocess.check_output(
     env=env_vars)
 
 hvac_url = os.environ.get('VAULT_ADDR','http://localhost:8200')
+hvac_verify_ssl = False if os.environ.get('VAULT_SKIP_VERIFY') else True
 hvac_client = {
     'url': hvac_url,
     'token': hvac_token,
+    'verify': hvac_verify_ssl,
 }
+if not hvac_verify_ssl:
+    urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 client = hvac.Client(**hvac_client)
-if os.environ.get('VAULT_SKIP_VERIFY'):
-    import requests
-    rs = requests.Session()
-    client.session = rs
-    rs.verify = False
-    import warnings
-    warnings.filterwarnings("ignore")
 assert client.is_authenticated()
 
 top_vault_prefix = os.environ.get('TOP_VAULT_PREFIX','/secret/')
